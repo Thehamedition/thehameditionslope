@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fullscreen Iframe Example</title>
+    <style>
+        body, html, iframe {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: relative; /* For positioning buttons */
+        }
+        .forceIosScrolling {
+            overflow: scroll;
+            -webkit-overflow-scrolling: touch;
+        }
+        button {
+            position: absolute;
+            top: 10px;
+            padding: 10px;
+            background-color: blue;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+        }
+        #moreGamesLeft {
+            left: 10px; /* Top left button */
+        }
+        #moreGamesRight {
+            right: 10px; /* Top right button */
+        }
+    </style>
+</head>
+<body>
+
+<button id="moreGamesLeft" onclick="window.open('https://sites.google.com/view/the-ham-edition/home', '_blank')">More Games</button>
+<button id="moreGamesRight" onclick="window.open('https://sites.google.com/view/the-ham-edition/home', '_blank')">More Games</button>
+
+<iframe id="innerFrame" name="innerFrame" sandbox="allow-scripts allow-popups allow-forms allow-same-origin allow-popups-to-escape-sandbox allow-downloads" frameborder="0" allowfullscreen src="https://jeowebsite.github.io/slope/" style="overflow: auto;"></iframe>
+
+<script>
+function openFullscreen() {
+    const iframe = document.getElementById("innerFrame");
+    if (iframe.requestFullscreen) {
+        iframe.requestFullscreen();
+    } else if (iframe.mozRequestFullScreen) { // Firefox
+        iframe.mozRequestFullScreen();
+    } else if (iframe.webkitRequestFullscreen) { // Chrome, Safari, and Opera
+        iframe.webkitRequestFullscreen();
+    } else if (iframe.msRequestFullscreen) { // IE/Edge
+        iframe.msRequestFullscreen();
+    }
+}
+
+// Automatically trigger fullscreen on load
+window.onload = function() {
+    openFullscreen();
+};
+
+// Additional scripts to load Google API
+function loadGapi() {
+    var loaderScript = document.createElement('script');
+    loaderScript.setAttribute('src', 'https://apis.google.com/js/api.js?checkCookie=1');
+    loaderScript.onload = function() {
+        this.onload = function() {};
+        loadGapiClient();
+    };
+    loaderScript.onreadystatechange = function() {
+        if (this.readyState === 'complete') {
+            this.onload();
+        }
+    };
+    (document.head || document.body || document.documentElement).appendChild(loaderScript);
+}
+
+function updateInnerFrame(url, enableInteraction, forceIosScrolling) {
+    var iframe = document.getElementById('innerFrame');
+    iframe.src = url;
+    iframe.onload = function() {
+        gapi.rpc.call('..', 'innerFrameLoaded');
+    };
+    if (enableInteraction) {
+        if (forceIosScrolling) {
+            var iframeParent = iframe.parentElement;
+            iframeParent.classList.add('forceIosScrolling');
+        } else {
+            iframe.style.overflow = 'auto';
+        }
+    } else {
+        iframe.style.pointerEvents = 'none';
+    }
+}
+
+function onPostMessage(ev) {
+    if (ev.data['magic'] !== 'SHIC') {
+        return;
+    }
+    var type = ev.data['type'];
+    if (type === 'resize') {
+        var height = ev.data['height'];
+        gapi.rpc.call('..', 'resize', undefined, height);
+    }
+}
+
+function onGapiInitialized() {
+    gapi.rpc.call('..', 'gapiInitialized');
+    gapi.rpc.register('updateInnerFrame', updateInnerFrame);
+    window.addEventListener('message', onPostMessage);
+}
+
+function loadGapiClient() {
+    gapi.load('gapi.rpc', onGapiInitialized);
+}
+
+if (document.readyState === 'complete') {
+    loadGapi();
+} else {
+    self.addEventListener('load', loadGapi);
+}
+</script>
+
+</body>
+</html>
